@@ -1,0 +1,53 @@
+syntax = "proto3";
+package network;
+
+service Tenvis {
+    rpc Streaming(StreamingRequest) returns (stream Message);
+}
+message StreamingRequest {
+    string test = 1;
+}
+
+message Message {
+    string NodeID = 1;
+    Nominate nominate = 2;
+    Prepare prepare = 3;
+    Commit commit = 4;
+    Externalize externalize = 5;
+}
+
+message Statement {
+    enum Type {
+        NOMINATE = 0;
+        PREPARE = 1;
+        COMMIT = 2;
+        EXTERNALIZE = 3;
+    }
+    Type type = 2;
+}
+
+message Nominate {
+    repeated Value voted = 1;
+    repeated Value accepted = 2;
+}
+
+message Prepare {
+
+}
+
+message Commit {
+
+}
+
+message Externalize {
+
+}
+
+message Value {
+    bytes data = 1;
+}
+
+message Slot {
+    uint64 index = 1;
+    repeated Value values = 2;
+}

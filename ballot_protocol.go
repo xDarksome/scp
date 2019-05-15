@@ -2,7 +2,6 @@ package scp
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/google/btree"
@@ -172,7 +171,7 @@ func (p *ballotProtocol) updateCounter(nodeID string, c uint32) {
 }
 
 func (p *ballotProtocol) prepareVoted(nodeID string, ballot *ballot) {
-	fmt.Println(p.network.ID(), "see", nodeID, "has voted prepare", ballot.value)
+	//fmt.Println(p.network.ID(), "see", nodeID, "has voted prepare", ballot.value)
 	if ballot.Less(p.current) {
 		return
 	}
@@ -187,7 +186,7 @@ func (p *ballotProtocol) prepareVoted(nodeID string, ballot *ballot) {
 }
 
 func (p *ballotProtocol) prepareAccepted(nodeID string, ballot *ballot) {
-	fmt.Println(p.network.ID(), "see", nodeID, "has accepted prepare", ballot.value)
+	//fmt.Println(p.network.ID(), "see", nodeID, "has accepted prepare", ballot.value)
 	p.updateCounter(nodeID, ballot.counter)
 	ballot = p.ballots.GetOrInsert(ballot, p.quorumSlices)
 	ballot.prepare.acceptedBy(nodeID)
@@ -202,7 +201,7 @@ func (p *ballotProtocol) prepareAccepted(nodeID string, ballot *ballot) {
 }
 
 func (p *ballotProtocol) commitVoted(nodeID string, ballot *ballot) {
-	fmt.Println(p.network.ID(), "see", nodeID, "has voted commit", ballot.value)
+	//fmt.Println(p.network.ID(), "see", nodeID, "has voted commit", ballot.value)
 	p.updateCounter(nodeID, ballot.counter)
 	ballot = p.ballots.GetOrInsert(ballot, p.quorumSlices)
 	ballot.commit.votedBy(nodeID)
@@ -213,7 +212,7 @@ func (p *ballotProtocol) commitVoted(nodeID string, ballot *ballot) {
 }
 
 func (p *ballotProtocol) commitAccepted(nodeID string, ballot *ballot) {
-	fmt.Println(p.network.ID(), "see", nodeID, "has accepted commit", ballot.value)
+	//fmt.Println(p.network.ID(), "see", nodeID, "has accepted commit", ballot.value)
 	p.updateCounter(nodeID, ballot.counter)
 	ballot = p.ballots.GetOrInsert(ballot, p.quorumSlices)
 	ballot.commit.acceptedBy(nodeID)
@@ -230,7 +229,7 @@ func (p *ballotProtocol) commitAccepted(nodeID string, ballot *ballot) {
 func (p *ballotProtocol) votePrepare() {
 	ballot := p.ballots.GetOrInsert(p.current, p.quorumSlices)
 	p.current = ballot
-	fmt.Println(p.network.ID(), "votes for prepare", ballot.value)
+	//fmt.Println(p.network.ID(), "votes for prepare", ballot.value)
 
 	if ballot.slotIndex == p.slotIndex {
 		p.network.Broadcast(&Message{
@@ -248,7 +247,7 @@ func (p *ballotProtocol) votePrepare() {
 }
 
 func (p *ballotProtocol) acceptPrepare(ballot *ballot) {
-	fmt.Println(p.network.ID(), "accepts prepare", ballot.value)
+	//fmt.Println(p.network.ID(), "accepts prepare", ballot.value)
 	if ballot.slotIndex == p.slotIndex {
 		p.network.Broadcast(&Message{
 			Type:      AcceptPrepare,
@@ -269,7 +268,7 @@ func (p *ballotProtocol) acceptPrepare(ballot *ballot) {
 }
 
 func (p *ballotProtocol) confirmPrepare(ballot *ballot) {
-	fmt.Println(p.network.ID(), "confirms prepare", ballot.value)
+	//fmt.Println(p.network.ID(), "confirms prepare", ballot.value)
 	if p.highestConfirmedPrepared == nil || p.highestConfirmedPrepared.less(ballot) {
 		p.highestConfirmedPrepared = ballot
 	}
@@ -281,7 +280,7 @@ func (p *ballotProtocol) confirmPrepare(ballot *ballot) {
 }
 
 func (p *ballotProtocol) voteCommit(ballot *ballot) {
-	fmt.Println(p.network.ID(), "votes for commit", ballot.value)
+	//fmt.Println(p.network.ID(), "votes for commit", ballot.value)
 	if ballot.slotIndex == p.slotIndex {
 		p.network.Broadcast(&Message{
 			Type:      VoteCommit,
@@ -298,7 +297,7 @@ func (p *ballotProtocol) voteCommit(ballot *ballot) {
 }
 
 func (p *ballotProtocol) acceptCommit(ballot *ballot) {
-	fmt.Println(p.network.ID(), "accepts commit", ballot.value)
+	//fmt.Println(p.network.ID(), "accepts commit", ballot.value)
 	if ballot.slotIndex == p.slotIndex {
 		p.network.Broadcast(&Message{
 			Type:      AcceptCommit,
@@ -315,7 +314,7 @@ func (p *ballotProtocol) acceptCommit(ballot *ballot) {
 }
 
 func (p *ballotProtocol) confirmCommit(ballot *ballot) {
-	fmt.Println(p.network.ID(), "confirms commit", ballot.value)
+	//fmt.Println(p.network.ID(), "confirms commit", ballot.value)
 	ballot.commit.selfConfirm()
 	p.slots <- Slot{
 		Index: p.slotIndex,

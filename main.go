@@ -64,7 +64,7 @@ func (n *Node) considerProposal(v Value) {
 func (n *Node) newSlot() {
 	n.slotIndex++
 	n.candidate = nil
-	n.proposals.start()
+	n.proposals.open()
 
 	n.nominationProtocol = newNominationProtocol(n.slotIndex, n.quorumSlices, n.network, n.App)
 	go n.nominationProtocol.Run()
@@ -113,10 +113,9 @@ func (n *Node) Run() {
 		case v := <-n.proposals.output:
 			n.considerProposal(v)
 		case m := <-n.inputMessages:
-			fmt.Println(n.network.ID(), "received", m)
 			n.receiveMessage(m)
 		case c := <-n.nominationProtocol.candidates:
-			n.proposals.stop()
+			n.proposals.close()
 			n.candidate = n.CombineValues(n.candidate, c)
 			n.ballotProtocol.candidates <- n.candidate
 		case s := <-n.ballotProtocol.slots:

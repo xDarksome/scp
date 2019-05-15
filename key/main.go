@@ -13,8 +13,9 @@ import (
 const seedLength = 40
 
 type Public struct {
-	raw ed25519.PublicKey
-	str string
+	raw   ed25519.PublicKey
+	str   string
+	Alias string
 }
 
 func (p *Public) Verify(message, sig []byte) bool {

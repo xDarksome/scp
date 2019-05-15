@@ -1,0 +1,40 @@
+syntax = "proto3";
+package grpc;
+
+service Node {
+    rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
+    rpc GetSlot(GetSlotRequest) returns (Slot);
+}
+message StreamMessagesRequest {}
+message GetSlotRequest {
+    uint64 index = 1;
+}
+
+
+
+message Message {
+    enum Type {
+        UNKNOWN = 0;
+        VOTE_NOMINATE = 1;
+        ACCEPT_NOMINATE = 2;
+        VOTE_PREPARE = 3;
+        ACCEPT_PREPARE = 4;
+        VOTE_COMMIT = 5;
+        ACCEPT_COMMIT = 6;
+    }
+
+    Type type = 1;
+    uint64 slotIndex = 2;
+    uint32 counter = 3;
+    bytes value = 4;
+}
+
+message Ballot {
+    uint32 counter = 1;
+    bytes value = 2;
+}
+
+message Slot {
+    uint64 index = 1;
+    bytes value = 2;
+}

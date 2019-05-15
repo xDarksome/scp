@@ -3,158 +3,128 @@ package scp
 import (
 	"fmt"
 
-	"github.com/xdarksome/scp/internal/btree"
-	"github.com/xdarksome/scp/internal/quorum"
-	"github.com/xdarksome/scp/pkg/key"
-	"github.com/xdarksome/scp/pkg/network"
+	"github.com/sirupsen/logrus"
+	"github.com/xdarksome/scp/key"
 )
 
-type QuorumSlice quorum.Slice
+type Value []byte
 
-type Validator interface {
-	ValidateSegment(*network.Value) bool
+type Slot struct {
+	Index uint64
+	Value
 }
 
-type NodeConfig struct {
-	Key         key.Public
-	Validator   Validator
-	QuorumSlice QuorumSlice
-	Addresses   map[string]key.Public
-	Port        uint
+type App interface {
+	Validator
+	CombineValues(...Value) Value
+	PersistSlot(Slot)
+}
+
+type Config struct {
+	App          App
+	Network      Network
+	Key          key.Public
+	QuorumSlices []*QuorumSlice
 }
 
 type Node struct {
-	ID key.Public
-	Validator
-	quorumSlice quorum.Slice
+	App
+	slotIndex uint64
 
-	listeners map[string]*listener
-	input     chan *network.Message
-
-	block      uint64
-	nominates  *btree.Agreements
-	candidates []*network.Value
-
-	output      chan *network.Message
-	broadcaster broadcaster
+	quorumSlices
+	network       Network
+	inputMessages chan *Message
+	proposals
+	nominationProtocol *nominationProtocol
+	candidate          Value
+	ballotProtocol     *ballotProtocol
 }
 
-func NewNode(cfg NodeConfig) *Node {
-	cfg.QuorumSlice.Validators = append(cfg.QuorumSlice.Validators, cfg.Key.String())
-	n := &Node{
-		ID:          cfg.Key,
-		Validator:   cfg.Validator,
-		quorumSlice: quorum.Slice(cfg.QuorumSlice),
-		listeners:   map[string]*listener{},
-		input:       make(chan *network.Message, 1000000),
-		nominates:   btree.NewAgreements(100),
-		output:      make(chan *network.Message, 1000000),
+func NewNode(cfg Config) *Node {
+	return &Node{
+		App:           cfg.App,
+		network:       cfg.Network,
+		quorumSlices:  cfg.QuorumSlices,
+		inputMessages: make(chan *Message, 1000000),
+		proposals:     newProposals(),
 	}
-
-	for addr, id := range cfg.Addresses {
-		n.listeners[id.String()] = newListener(n, id, addr, n.input)
-	}
-
-	n.broadcaster = newBroadcaster(cfg.Key, cfg.Port, n.output)
-
-	return n
 }
 
-func (n *Node) ConsiderSegment(segment *network.Value) {
-	if !n.ValidateSegment(segment) {
+func (n *Node) Propose(v Value) {
+	n.proposals.input <- v
+}
+
+func (n *Node) considerProposal(v Value) {
+	if !n.ValidateValue(v) {
+		return
+	}
+	n.nominationProtocol.proposals <- v
+}
+
+func (n *Node) newSlot() {
+	n.slotIndex++
+	n.candidate = nil
+	n.proposals.start()
+
+	n.nominationProtocol = newNominationProtocol(n.slotIndex, n.quorumSlices, n.network, n.App)
+	go n.nominationProtocol.Run()
+
+	n.ballotProtocol = newBallotProtocol(n.slotIndex, n.quorumSlices, n.network)
+	go n.ballotProtocol.Run()
+}
+
+func (n *Node) fetchNetworkMessages() {
+	var m *Message
+	for {
+		m = n.network.Receive()
+		n.inputMessages <- m
+	}
+}
+
+func (n *Node) receiveMessage(m *Message) {
+	if m.SlotIndex < n.slotIndex {
 		return
 	}
 
-	agreement, _ := n.nominates.GetOrInsert(quorum.AgreementOn(segment), n.ID.String(), n.quorumSlice)
-	n.proposeNominate(agreement)
-}
-
-func (n *Node) proposeNominate(nominate *quorum.Agreement) {
-	fmt.Println(n.ID.String(), "proposed", nominate.Subject)
-	n.output <- &network.Message{
-		Nominate: &network.Nominate{
-			Voted: []*network.Value{nominate.Subject},
-		},
-	}
-	nominate.VotedBy(n.ID.String())
-
-	if !nominate.Accepted && nominate.Vote.ReachedQuorumThreshold() {
-		n.acceptNominate(nominate)
+	switch m.Type {
+	case VoteNominate, AcceptNominate:
+		n.nominationProtocol.input <- m
+	case VotePrepare, AcceptPrepare, VoteCommit, AcceptCommit:
+		n.ballotProtocol.input <- m
+	default:
+		logrus.Errorf("unknown message type: %d", m.Type)
 	}
 }
 
-func (n *Node) acceptNominate(nominate *quorum.Agreement) {
-	fmt.Println(n.ID.String(), "accepted", nominate.Subject)
-	n.output <- &network.Message{
-		Nominate: &network.Nominate{
-			Accepted: []*network.Value{nominate.Subject},
-		},
-	}
-	nominate.AcceptedBy(n.ID.String())
-
-	if !nominate.Confirmed && nominate.Accept.ReachedQuorumThreshold() {
-		n.confirmNominate(nominate)
+func (n *Node) sendMessage(m *Message) {
+	if m.SlotIndex != n.slotIndex {
+		return
 	}
 
-	nominate.Accepted = true
-}
-
-func (n *Node) confirmNominate(nominate *quorum.Agreement) {
-	n.candidates = append(n.candidates, nominate.Subject)
-	nominate.Confirmed = true
+	n.network.Broadcast(m)
 }
 
 func (n *Node) Run() {
-	for i := range n.listeners {
-		go n.listeners[i].Run()
-	}
-	go n.broadcaster.Run()
+	go n.fetchNetworkMessages()
 
-	for m := range n.input {
-		if m.Nominate.Voted != nil {
-			n.nominateProposed(m.NodeID, m.Nominate.Voted)
-		}
-		if m.Nominate.Accepted != nil {
-			n.nominateAccepted(m.NodeID, m.Nominate.Accepted)
-		}
-	}
-}
-
-func (n *Node) nominateProposed(nodeID string, segments []*network.Value) {
-	for i := range segments {
-		s := segments[i]
-		nominate, inserted := n.nominates.GetOrInsert(quorum.AgreementOn(s), n.ID.String(), n.quorumSlice)
-		nominate.VotedBy(nodeID)
-
-		if !inserted {
-			if !nominate.Accepted && nominate.Vote.ReachedQuorumThreshold() {
-				n.acceptNominate(nominate)
-			}
-			continue
-		}
-
-		if !n.ValidateSegment(s) {
-			continue
-		}
-
-		n.proposeNominate(nominate)
-	}
-}
-
-func (n *Node) nominateAccepted(nodeID string, segments []*network.Value) {
-	for i := range segments {
-		s := segments[i]
-
-		nominate, _ := n.nominates.GetOrInsert(quorum.AgreementOn(s), n.ID.String(), n.quorumSlice)
-
-		nominate.AcceptedBy(nodeID)
-		if !nominate.Accepted && nominate.Accept.ReachedBlockingThreshold() {
-			n.acceptNominate(nominate)
-			continue
-		}
-
-		if !nominate.Confirmed && nominate.Accept.ReachedQuorumThreshold() {
-			n.confirmNominate(nominate)
+	n.newSlot()
+	for {
+		select {
+		case v := <-n.proposals.output:
+			n.considerProposal(v)
+		case m := <-n.inputMessages:
+			fmt.Println(n.network.ID(), "received", m)
+			n.receiveMessage(m)
+		case c := <-n.nominationProtocol.candidates:
+			n.proposals.stop()
+			n.candidate = n.CombineValues(n.candidate, c)
+			n.ballotProtocol.candidates <- n.candidate
+		case s := <-n.ballotProtocol.slots:
+			n.nominationProtocol.Stop()
+			n.ballotProtocol.Stop()
+			fmt.Println("externalized", s.Index, s.Value)
+			n.PersistSlot(s)
+			n.newSlot()
 		}
 	}
 }

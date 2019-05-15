@@ -2,22 +2,22 @@ package key_test
 
 import (
 	"fmt"
+	"github.com/xdarksome/scp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/xdarksome/scp/pkg/key"
 )
 
 func TestKeys(t *testing.T) {
-	public, private := key.Generate()
+	public, private := scp.Generate()
 	fmt.Printf("public: %s\n", public.String())
 	fmt.Printf("private: %s\n", private.String())
 
-	parsedPub, err := key.ParsePublic(public.String())
+	parsedPub, err := scp.ParsePublic(public.String())
 	require.NoError(t, err)
 	require.Equal(t, public, parsedPub)
 
-	parsedPrivate, err := key.ParsePrivate(private.String())
+	parsedPrivate, err := scp.ParsePrivate(private.String())
 	require.NoError(t, err)
 	require.Equal(t, private, parsedPrivate)
 

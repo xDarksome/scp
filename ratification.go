@@ -73,7 +73,7 @@ outer:
 	}
 }
 
-func (c ballotCounters) hasLesser(than uint32) bool {
+func (c ballotCounters) hasLesserThan(than uint32) bool {
 	for _, counter := range c {
 		if counter < than {
 			return true

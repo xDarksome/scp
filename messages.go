@@ -29,6 +29,33 @@ type Message struct {
 	Value
 }
 
+type messages struct {
+	input chan *Message
+
+	voteNominate   chan *Message
+	acceptNominate chan *Message
+	votePrepare    chan *Message
+	acceptPrepare  chan *Message
+	voteCommit     chan *Message
+	acceptCommit   chan *Message
+
+	output chan *Message
+}
+
+func newMessages() messages {
+	return messages{
+		input:          make(chan *Message, 1000000),
+		voteNominate:   make(chan *Message, 1000),
+		acceptNominate: make(chan *Message, 1000),
+		votePrepare:    make(chan *Message, 1000),
+		acceptPrepare:  make(chan *Message, 1000),
+		voteCommit:     make(chan *Message, 1000),
+		acceptCommit:   make(chan *Message, 1000),
+		output:         make(chan *Message, 1000000),
+	}
+
+}
+
 /*type network struct {
 	broadcaster         *broadcaster
 	receivedNominations chan *nominateMessage

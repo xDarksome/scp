@@ -23,7 +23,7 @@ func (q *QuorumSlice) blockingThreshold(a agreement) bool {
 		}
 	}
 
-	if agreed > q.Threshold-uint32(len(q.Validators)+len(q.InnerSlices)) {
+	if agreed > uint32(len(q.Validators)+len(q.InnerSlices))-q.Threshold {
 		return true
 	}
 
@@ -67,7 +67,7 @@ func (q *QuorumSlice) blockingCounter(c uint32, counters map[string]uint32) bool
 		}
 	}
 
-	if blocking > q.Threshold-uint32(len(q.Validators)+len(q.InnerSlices)) {
+	if blocking > uint32(len(q.Validators)+len(q.InnerSlices))-q.Threshold {
 		return true
 	}
 

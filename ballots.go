@@ -2,7 +2,6 @@ package scp
 
 import (
 	"bytes"
-	"time"
 
 	"github.com/google/btree"
 )
@@ -45,20 +44,12 @@ func (b *ballot) compatible(ballot *ballot) bool {
 }
 
 type ballots struct {
-	btree                    *btree.BTree
-	current                  *ballot
-	highestConfirmedPrepared *ballot
-	highestAcceptedPrepared  *ballot
-	counters                 ballotCounters
-	timer                    *time.Timer
+	btree *btree.BTree
 }
 
-func newBallots(slotIndex uint64) ballots {
+func newBallots() ballots {
 	return ballots{
-		btree:    btree.New(100),
-		current:  &ballot{slotIndex: slotIndex, counter: 1},
-		counters: make(ballotCounters),
-		timer:    time.NewTimer(time.Hour),
+		btree: btree.New(100),
 	}
 }
 

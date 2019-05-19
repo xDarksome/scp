@@ -47,11 +47,12 @@ func Test(t *testing.T) {
 	node3key := "charley"
 	node4key := "dave"
 
-	node1 := scp.New(0, scp.Config{
-		NodeID:    node1key,
-		Validator: app{},
-		Combiner:  app{},
-		Ledger:    app{},
+	node1 := scp.New(scp.Config{
+		NodeID:      node1key,
+		CurrentSlot: 10,
+		Validator:   app{},
+		Combiner:    app{},
+		Ledger:      app{},
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -64,11 +65,12 @@ func Test(t *testing.T) {
 		},
 	})
 
-	node2 := scp.New(0, scp.Config{
-		NodeID:    node2key,
-		Validator: app{},
-		Combiner:  app{},
-		Ledger:    app{},
+	node2 := scp.New(scp.Config{
+		NodeID:      node2key,
+		CurrentSlot: 10,
+		Validator:   app{},
+		Combiner:    app{},
+		Ledger:      app{},
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -81,11 +83,12 @@ func Test(t *testing.T) {
 		},
 	})
 
-	node3 := scp.New(0, scp.Config{
-		NodeID:    node3key,
-		Validator: app{},
-		Combiner:  app{},
-		Ledger:    app{},
+	node3 := scp.New(scp.Config{
+		NodeID:      node3key,
+		CurrentSlot: 10,
+		Validator:   app{},
+		Combiner:    app{},
+		Ledger:      app{},
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -98,11 +101,12 @@ func Test(t *testing.T) {
 		},
 	})
 
-	node4 := scp.New(0, scp.Config{
-		NodeID:    node4key,
-		Validator: badApp{},
-		Combiner:  badApp{},
-		Ledger:    badApp{},
+	node4 := scp.New(scp.Config{
+		NodeID:      node4key,
+		CurrentSlot: 10,
+		Validator:   badApp{},
+		Combiner:    badApp{},
+		Ledger:      badApp{},
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,

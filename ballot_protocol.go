@@ -7,8 +7,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Catchuper interface {
-	GetSlot(slotIndex uint64, nodeID string) (Slot, error)
+type SlotsLoader interface {
+	LoadSlots(from uint64, to Slot) []Slot
 }
 
 type Ledger interface {
@@ -19,6 +19,7 @@ type ballotProtocol struct {
 	slotIndex uint64
 	id        string
 
+	loader SlotsLoader
 	ledger Ledger
 
 	quorumSlices
@@ -36,17 +37,44 @@ type ballotProtocol struct {
 	nominationProtocol chan protocolMessage
 	lastCandidate      Value
 	candidates         chan Value
+
+	catchUpDone  chan struct{}
+	persistLater []Slot
+}
+
+func (b *ballotProtocol) init(slotIndex uint64) {
+	b.slotIndex = slotIndex
+	b.ballots = newBallots()
+	b.currentBallot = &ballot{slotIndex: slotIndex, counter: 1}
+	b.counters = make(ballotCounters)
+	b.timer = time.NewTimer(time.Hour)
+}
+
+func (b *ballotProtocol) reinit(index uint64) {
+	b.init(index)
+
+	b.candidates = make(chan Value, 1000)
+	b.highestAcceptedPrepared = nil
+	b.highestConfirmedPrepared = nil
+	b.lastCandidate = nil
+
+	b.nominationProtocol <- protocolMessage{
+		slotIndex:  index,
+		candidates: b.candidates,
+	}
 }
 
 func (b *ballotProtocol) run() {
 	for {
 		select {
-		case <-b.timer.C:
-			b.updateCurrentBallotCounter(b.currentBallot.counter + 1)
 		case c := <-b.candidates:
 			b.newCandidate(c)
 		case m := <-b.inputMessages:
 			b.receive(m)
+		case <-b.timer.C:
+			b.updateCurrentBallotCounter(b.currentBallot.counter + 1)
+		case <-b.catchUpDone:
+			b.finishCatchUp()
 		}
 	}
 }
@@ -78,6 +106,12 @@ func (b *ballotProtocol) receive(m *Message) {
 	default:
 		logrus.Errorf("unexpected message type: %d", m.Type)
 	}
+}
+
+func (b *ballotProtocol) updateCurrentBallotCounter(c uint32) {
+	b.currentBallot.counter = c
+	b.recomputeCurrentBallotValue()
+	b.votePrepare()
 }
 
 func (b *ballotProtocol) broadcast(m *Message) {
@@ -235,37 +269,41 @@ func (b *ballotProtocol) confirmCommit(ballot *ballot) {
 }
 
 func (b *ballotProtocol) externalize(s Slot) {
+	if s.Index != b.slotIndex {
+		b.catchUp(s)
+		b.reinit(s.Index)
+		return
+	}
+
 	b.ledger.PersistSlot(s)
 	fmt.Println("\n", b.id, "externalized", s.Index, string(s.Value))
 	b.reinit(s.Index + 1)
 }
 
-func (b *ballotProtocol) init(slotIndex uint64) {
-	b.slotIndex = slotIndex
-	b.ballots = newBallots()
-	b.currentBallot = &ballot{slotIndex: slotIndex, counter: 1}
-	b.counters = make(ballotCounters)
-	b.timer = time.NewTimer(time.Hour)
-}
+func (b *ballotProtocol) catchUp(slot Slot) {
+	inProgress := b.persistLater != nil
+	b.persistLater = append(b.persistLater, slot)
 
-func (b *ballotProtocol) reinit(index uint64) {
-	b.init(index)
-
-	b.candidates = make(chan Value, 1000)
-	b.highestAcceptedPrepared = nil
-	b.highestConfirmedPrepared = nil
-	b.lastCandidate = nil
-
-	b.nominationProtocol <- protocolMessage{
-		slotIndex:  index,
-		candidates: b.candidates,
+	if inProgress {
+		return
 	}
+
+	go catchuper{
+		loader: b.loader,
+		ledger: b.ledger,
+		from:   b.slotIndex,
+		to:     slot,
+		done:   b.catchUpDone,
+	}.catchUp()
 }
 
-func (b *ballotProtocol) updateCurrentBallotCounter(c uint32) {
-	b.currentBallot.counter = c
-	b.recomputeCurrentBallotValue()
-	b.votePrepare()
+func (b *ballotProtocol) finishCatchUp() {
+	for _, slot := range b.persistLater {
+		b.ledger.PersistSlot(slot)
+	}
+
+	b.slotIndex = b.persistLater[len(b.persistLater)-1].Index + 1
+	b.persistLater = nil
 }
 
 func (b *ballotProtocol) recomputeCurrentBallotValue() {

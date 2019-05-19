@@ -15,6 +15,7 @@ type Config struct {
 	Validator    Validator
 	Combiner     Combiner
 	Ledger       Ledger
+	SlotsLoader  SlotsLoader
 	QuorumSlices []*QuorumSlice
 }
 
@@ -47,11 +48,13 @@ func New(cfg Config) *Consensus {
 		slotIndex:          cfg.CurrentSlot,
 		id:                 cfg.NodeID,
 		ledger:             cfg.Ledger,
+		loader:             cfg.SlotsLoader,
 		quorumSlices:       cfg.QuorumSlices,
 		inputMessages:      make(chan *Message, 1000000),
 		outputMessages:     outputMessages,
 		candidates:         candidates,
 		nominationProtocol: link,
+		catchUpDone:        make(chan struct{}),
 	}
 	ballotProtocol.init(cfg.CurrentSlot)
 

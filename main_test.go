@@ -10,7 +10,21 @@ import (
 	"github.com/xdarksome/scp"
 )
 
-type app struct{}
+type app struct {
+	slots map[uint64]scp.Slot
+}
+
+func newApp() app {
+	return app{
+		slots: map[uint64]scp.Slot{
+			1: {Index: 1, Value: []byte{1}},
+			2: {Index: 2, Value: []byte{2}},
+			3: {Index: 3, Value: []byte{3}},
+			4: {Index: 4, Value: []byte{4}},
+		},
+	}
+}
+
 type badApp struct{}
 
 func (v app) ValidateValue(scp.Value) bool {
@@ -29,7 +43,21 @@ func (v app) CombineValues(values ...scp.Value) (composite scp.Value) {
 	return composite
 }
 
-func (v app) PersistSlot(slot scp.Slot) {}
+func (v app) PersistSlot(s scp.Slot) {
+	v.slots[s.Index] = s
+}
+
+type catchup struct {
+	app
+}
+
+func (c catchup) LoadSlots(from uint64, to scp.Slot) (loaded []scp.Slot) {
+	time.Sleep(5 * time.Second)
+	for i := from; i < to.Index; i++ {
+		loaded = append(loaded, c.slots[i])
+	}
+	return loaded
+}
 
 func (v badApp) ValidateValue(segment scp.Value) bool {
 	return false
@@ -49,10 +77,10 @@ func Test(t *testing.T) {
 
 	node1 := scp.New(scp.Config{
 		NodeID:      node1key,
-		CurrentSlot: 10,
-		Validator:   app{},
-		Combiner:    app{},
-		Ledger:      app{},
+		CurrentSlot: 5,
+		Validator:   newApp(),
+		Combiner:    newApp(),
+		Ledger:      newApp(),
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -67,10 +95,10 @@ func Test(t *testing.T) {
 
 	node2 := scp.New(scp.Config{
 		NodeID:      node2key,
-		CurrentSlot: 10,
-		Validator:   app{},
-		Combiner:    app{},
-		Ledger:      app{},
+		CurrentSlot: 5,
+		Validator:   newApp(),
+		Combiner:    newApp(),
+		Ledger:      newApp(),
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -83,12 +111,13 @@ func Test(t *testing.T) {
 		},
 	})
 
+	node3app := newApp()
 	node3 := scp.New(scp.Config{
 		NodeID:      node3key,
-		CurrentSlot: 10,
-		Validator:   app{},
-		Combiner:    app{},
-		Ledger:      app{},
+		CurrentSlot: 5,
+		Validator:   node3app,
+		Combiner:    node3app,
+		Ledger:      node3app,
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,
@@ -103,10 +132,11 @@ func Test(t *testing.T) {
 
 	node4 := scp.New(scp.Config{
 		NodeID:      node4key,
-		CurrentSlot: 10,
-		Validator:   badApp{},
-		Combiner:    badApp{},
-		Ledger:      badApp{},
+		CurrentSlot: 1,
+		Validator:   newApp(),
+		Combiner:    newApp(),
+		Ledger:      newApp(),
+		SlotsLoader: &catchup{node3app},
 		QuorumSlices: []*scp.QuorumSlice{
 			{
 				Threshold: 2,

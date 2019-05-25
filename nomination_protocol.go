@@ -103,7 +103,6 @@ func (n *nominationProtocol) nominateVoted(m *Message) {
 }
 
 func (n *nominationProtocol) nominateAccepted(m *Message) {
-	//fmt.Println(n.id, "see", m.NodeID, "has accepted nominate", m.SlotIndex, string(m.Value))
 	nominate := n.nominates.findOrCreate(m.Value, n.quorumSlices)
 	nominate.acceptedBy(m.NodeID)
 
@@ -117,7 +116,6 @@ func (n *nominationProtocol) nominateAccepted(m *Message) {
 }
 
 func (n *nominationProtocol) voteNominate(nominate *nominate) {
-	//fmt.Println(n.id, "votes for nominate", string(nominate.value))
 	n.broadcast(&Message{
 		Type:      VoteNominate,
 		SlotIndex: n.slotIndex,
@@ -131,7 +129,6 @@ func (n *nominationProtocol) voteNominate(nominate *nominate) {
 }
 
 func (n *nominationProtocol) acceptNominate(nominate *nominate) {
-	//fmt.Println(n.id, "accepts nominate", string(nominate.value))
 	n.broadcast(&Message{
 		Type:      AcceptNominate,
 		SlotIndex: n.slotIndex,
@@ -145,7 +142,6 @@ func (n *nominationProtocol) acceptNominate(nominate *nominate) {
 }
 
 func (n *nominationProtocol) confirmNominate(nominate *nominate) {
-	//fmt.Println(n.id, "confirms nominate", string(nominate.value))
 	n.proposals.suspend()
 	nominate.selfConfirm()
 

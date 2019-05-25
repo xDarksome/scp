@@ -119,8 +119,6 @@ func (b *ballotProtocol) broadcast(m *Message) {
 }
 
 func (b *ballotProtocol) prepareVoted(m *Message) {
-	//fmt.Println(b.id, "see", m.NodeID, "has voted prepare", m.SlotIndex, m.Counter, string(m.Value))
-
 	b.updateBallotCounter(m.NodeID, m.Counter)
 	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.prepare.votedBy(m.NodeID)
@@ -131,7 +129,6 @@ func (b *ballotProtocol) prepareVoted(m *Message) {
 }
 
 func (b *ballotProtocol) prepareAccepted(m *Message) {
-	//fmt.Println(b.id, "see", m.NodeID, "has accepted prepare", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
 	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.prepare.acceptedBy(m.NodeID)
@@ -146,7 +143,6 @@ func (b *ballotProtocol) prepareAccepted(m *Message) {
 }
 
 func (b *ballotProtocol) commitVoted(m *Message) {
-	//fmt.Println(b.id, "see", m.NodeID, "has voted commit", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
 	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.commit.votedBy(m.NodeID)
@@ -157,7 +153,6 @@ func (b *ballotProtocol) commitVoted(m *Message) {
 }
 
 func (b *ballotProtocol) commitAccepted(m *Message) {
-	//fmt.Println(b.id, "see", m.NodeID, "has accepted commit", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
 	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.commit.acceptedBy(m.NodeID)
@@ -178,7 +173,6 @@ func (b *ballotProtocol) votePrepare() {
 		b.currentBallot.value,
 		b.quorumSlices)
 	b.currentBallot = ballot
-	//fmt.Println(b.id, "votes for prepare", ballot.counter, string(ballot.value))
 
 	b.broadcast(&Message{
 		Type:      VotePrepare,
@@ -194,7 +188,6 @@ func (b *ballotProtocol) votePrepare() {
 }
 
 func (b *ballotProtocol) acceptPrepare(ballot *ballot) {
-	//fmt.Println(b.id, "accepts prepare", ballot.counter, string(ballot.value))
 	b.broadcast(&Message{
 		Type:      AcceptPrepare,
 		SlotIndex: ballot.slotIndex,
@@ -213,7 +206,6 @@ func (b *ballotProtocol) acceptPrepare(ballot *ballot) {
 }
 
 func (b *ballotProtocol) confirmPrepare(ballot *ballot) {
-	//fmt.Println(b.id, "confirms prepare", ballot.counter, string(ballot.value))
 	if b.highestConfirmedPrepared == nil || b.highestConfirmedPrepared.less(ballot) {
 		b.highestConfirmedPrepared = ballot
 	}
@@ -225,7 +217,6 @@ func (b *ballotProtocol) confirmPrepare(ballot *ballot) {
 }
 
 func (b *ballotProtocol) voteCommit(ballot *ballot) {
-	//fmt.Println(b.id, "votes for commit", ballot.counter, string(ballot.value))
 	b.broadcast(&Message{
 		Type:      VoteCommit,
 		SlotIndex: ballot.slotIndex,
@@ -240,7 +231,6 @@ func (b *ballotProtocol) voteCommit(ballot *ballot) {
 }
 
 func (b *ballotProtocol) acceptCommit(ballot *ballot) {
-	//fmt.Println(b.id, "accepts commit", ballot.counter, string(ballot.value))
 	b.broadcast(&Message{
 		Type:      AcceptCommit,
 		SlotIndex: ballot.slotIndex,
@@ -255,7 +245,6 @@ func (b *ballotProtocol) acceptCommit(ballot *ballot) {
 }
 
 func (b *ballotProtocol) confirmCommit(ballot *ballot) {
-	//fmt.Println(b.id, "confirms commit", ballot.counter, string(ballot.value))
 	ballot.commit.selfConfirm()
 	b.externalize(Slot{
 		Index: ballot.slotIndex,
@@ -271,7 +260,6 @@ func (b *ballotProtocol) externalize(s Slot) {
 	}
 
 	b.ledger.PersistSlot(s)
-	//fmt.Println("\n", b.id, "externalized", s.Index, string(s.Value))
 	b.reinit(s.Index + 1)
 }
 

@@ -44,6 +44,7 @@ func (v app) CombineValues(values ...scp.Value) (composite scp.Value) {
 }
 
 func (v app) PersistSlot(s scp.Slot) {
+	fmt.Println("externalize slot", s.Index, s.Value)
 	v.slots[s.Index] = s
 }
 
@@ -157,6 +158,7 @@ func Test(t *testing.T) {
 	go func() {
 		for {
 			m := node1.OutputMessage()
+			//printMessage(m)
 			node2.InputMessage(m)
 			node3.InputMessage(m)
 			node4.InputMessage(m)
@@ -166,6 +168,7 @@ func Test(t *testing.T) {
 	go func() {
 		for {
 			m := node2.OutputMessage()
+			//printMessage(m)
 			node1.InputMessage(m)
 			node3.InputMessage(m)
 			node4.InputMessage(m)
@@ -175,6 +178,7 @@ func Test(t *testing.T) {
 	go func() {
 		for {
 			m := node3.OutputMessage()
+			//printMessage(m)
 			node2.InputMessage(m)
 			node1.InputMessage(m)
 			node4.InputMessage(m)
@@ -184,6 +188,7 @@ func Test(t *testing.T) {
 	go func() {
 		for {
 			m := node4.OutputMessage()
+			//printMessage(m)
 			node2.InputMessage(m)
 			node3.InputMessage(m)
 			node1.InputMessage(m)
@@ -210,4 +215,26 @@ func Test(t *testing.T) {
 		node3.Propose([]byte(fmt.Sprint(rand.Int())))
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+func printMessage(m *scp.Message) {
+	node := m.NodeID
+
+	var action string
+	switch m.Type {
+	case scp.VoteNominate:
+		action = "votes nominate"
+	case scp.AcceptNominate:
+		action = "accepts nominate"
+	case scp.VotePrepare:
+		action = "votes prepare"
+	case scp.AcceptPrepare:
+		action = "accepts prepare"
+	case scp.VoteCommit:
+		action = "votes commit"
+	case scp.AcceptCommit:
+		action = "accepts commit"
+	}
+
+	fmt.Println(node, action, "counter:", m.Counter, "value", string(m.Value))
 }

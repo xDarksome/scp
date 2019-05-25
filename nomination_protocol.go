@@ -1,9 +1,5 @@
 package scp
 
-import (
-	"github.com/sirupsen/logrus"
-)
-
 type Validator interface {
 	ValidateValue(Value) bool
 }
@@ -66,8 +62,6 @@ func (n *nominationProtocol) receive(m *Message) {
 		n.nominateVoted(m)
 	case AcceptNominate:
 		n.nominateAccepted(m)
-	default:
-		logrus.Errorf("unexpected message type: %d", m.Type)
 	}
 }
 
@@ -93,11 +87,9 @@ func (n *nominationProtocol) reinit(m protocolMessage) {
 }
 
 func (n *nominationProtocol) nominateVoted(m *Message) {
-	//fmt.Println(n.id, "see", m.NodeID, "has voted nominate", m.SlotIndex, string(m.Value))
 	nominate := n.nominates.Find(m.Value)
 	if nominate == nil {
 		if !n.validator.ValidateValue(m.Value) {
-			//logrus.Warnf("invalid nominate from %s", m.NodeID)
 			return
 		}
 		nominate = n.nominates.Create(m.Value, n.quorumSlices)

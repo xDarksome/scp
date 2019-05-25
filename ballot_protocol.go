@@ -1,10 +1,7 @@
 package scp
 
 import (
-	"fmt"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type SlotsLoader interface {
@@ -103,8 +100,6 @@ func (b *ballotProtocol) receive(m *Message) {
 		b.commitVoted(m)
 	case AcceptCommit:
 		b.commitAccepted(m)
-	default:
-		logrus.Errorf("unexpected message type: %d", m.Type)
 	}
 }
 
@@ -276,7 +271,7 @@ func (b *ballotProtocol) externalize(s Slot) {
 	}
 
 	b.ledger.PersistSlot(s)
-	fmt.Println("\n", b.id, "externalized", s.Index, string(s.Value))
+	//fmt.Println("\n", b.id, "externalized", s.Index, string(s.Value))
 	b.reinit(s.Index + 1)
 }
 

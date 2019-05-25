@@ -1,7 +1,5 @@
 package scp
 
-import "github.com/sirupsen/logrus"
-
 type Value []byte
 
 type Slot struct {
@@ -80,8 +78,6 @@ func (c *Consensus) InputMessage(m *Message) {
 		c.nominationProtocol.inputMessages <- m
 	case VotePrepare, AcceptPrepare, VoteCommit, AcceptCommit:
 		c.ballotProtocol.inputMessages <- m
-	default:
-		logrus.Errorf("unknown message type: %d", m.Type)
 	}
 }
 

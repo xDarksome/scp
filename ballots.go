@@ -53,7 +53,7 @@ func newBallots() ballots {
 	}
 }
 
-func (b ballots) FindOrCreate(slotIndex uint64, counter uint32, value Value, slices quorumSlices) *ballot {
+func (b ballots) findOrCreate(slotIndex uint64, counter uint32, value Value, slices quorumSlices) *ballot {
 	bal := &ballot{slotIndex: slotIndex, counter: counter, value: value}
 	if item := b.btree.Get(bal); item != nil {
 		return item.(*ballot)

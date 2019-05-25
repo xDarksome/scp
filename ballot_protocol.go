@@ -122,7 +122,7 @@ func (b *ballotProtocol) prepareVoted(m *Message) {
 	//fmt.Println(b.id, "see", m.NodeID, "has voted prepare", m.SlotIndex, m.Counter, string(m.Value))
 
 	b.updateBallotCounter(m.NodeID, m.Counter)
-	ballot := b.ballots.FindOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
+	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.prepare.votedBy(m.NodeID)
 
 	if !ballot.prepare.accepted && ballot.prepare.votes.reachedQuorumThreshold(b.quorumSlices) {
@@ -133,7 +133,7 @@ func (b *ballotProtocol) prepareVoted(m *Message) {
 func (b *ballotProtocol) prepareAccepted(m *Message) {
 	//fmt.Println(b.id, "see", m.NodeID, "has accepted prepare", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
-	ballot := b.ballots.FindOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
+	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.prepare.acceptedBy(m.NodeID)
 
 	if !ballot.prepare.accepted && ballot.prepare.accepts.reachedBlockingThreshold(b.quorumSlices) {
@@ -148,7 +148,7 @@ func (b *ballotProtocol) prepareAccepted(m *Message) {
 func (b *ballotProtocol) commitVoted(m *Message) {
 	//fmt.Println(b.id, "see", m.NodeID, "has voted commit", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
-	ballot := b.ballots.FindOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
+	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.commit.votedBy(m.NodeID)
 
 	if !ballot.commit.accepted && ballot.commit.votes.reachedQuorumThreshold(b.quorumSlices) {
@@ -159,7 +159,7 @@ func (b *ballotProtocol) commitVoted(m *Message) {
 func (b *ballotProtocol) commitAccepted(m *Message) {
 	//fmt.Println(b.id, "see", m.NodeID, "has accepted commit", m.SlotIndex, m.Counter, string(m.Value))
 	b.updateBallotCounter(m.NodeID, m.Counter)
-	ballot := b.ballots.FindOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
+	ballot := b.ballots.findOrCreate(m.SlotIndex, m.Counter, m.Value, b.quorumSlices)
 	ballot.commit.acceptedBy(m.NodeID)
 
 	if !ballot.commit.accepted && ballot.commit.accepts.reachedBlockingThreshold(b.quorumSlices) {
@@ -172,7 +172,7 @@ func (b *ballotProtocol) commitAccepted(m *Message) {
 }
 
 func (b *ballotProtocol) votePrepare() {
-	ballot := b.ballots.FindOrCreate(
+	ballot := b.ballots.findOrCreate(
 		b.currentBallot.slotIndex,
 		b.currentBallot.counter,
 		b.currentBallot.value,

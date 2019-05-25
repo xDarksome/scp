@@ -46,8 +46,8 @@ func (n *nominationProtocol) considerProposal(v Value) {
 		return
 	}
 
-	if nominate := n.nominates.Find(v); nominate == nil {
-		nominate = n.nominates.Create(v, n.quorumSlices)
+	if nominate := n.nominates.find(v); nominate == nil {
+		nominate = n.nominates.create(v, n.quorumSlices)
 		n.voteNominate(nominate)
 	}
 }
@@ -87,12 +87,12 @@ func (n *nominationProtocol) reinit(m protocolMessage) {
 }
 
 func (n *nominationProtocol) nominateVoted(m *Message) {
-	nominate := n.nominates.Find(m.Value)
+	nominate := n.nominates.find(m.Value)
 	if nominate == nil {
 		if !n.validator.ValidateValue(m.Value) {
 			return
 		}
-		nominate = n.nominates.Create(m.Value, n.quorumSlices)
+		nominate = n.nominates.create(m.Value, n.quorumSlices)
 		n.voteNominate(nominate)
 	}
 
@@ -104,7 +104,7 @@ func (n *nominationProtocol) nominateVoted(m *Message) {
 
 func (n *nominationProtocol) nominateAccepted(m *Message) {
 	//fmt.Println(n.id, "see", m.NodeID, "has accepted nominate", m.SlotIndex, string(m.Value))
-	nominate := n.nominates.FindOrCreate(m.Value, n.quorumSlices)
+	nominate := n.nominates.findOrCreate(m.Value, n.quorumSlices)
 	nominate.acceptedBy(m.NodeID)
 
 	if !nominate.accepted && nominate.accepts.reachedBlockingThreshold(n.quorumSlices) {

@@ -23,16 +23,16 @@ func newNominates() nominates {
 	return nominates{btree.New(100)}
 }
 
-func (n nominates) FindOrCreate(value Value, slices quorumSlices) *nominate {
-	nom := n.Find(value)
+func (n nominates) findOrCreate(value Value, slices quorumSlices) *nominate {
+	nom := n.find(value)
 	if nom == nil {
-		nom = n.Create(value, slices)
+		nom = n.create(value, slices)
 	}
 
 	return nom
 }
 
-func (n nominates) Find(value Value) *nominate {
+func (n nominates) find(value Value) *nominate {
 	if item := n.btree.Get(&nominate{value: value}); item != nil {
 		return item.(*nominate)
 	}
@@ -40,7 +40,7 @@ func (n nominates) Find(value Value) *nominate {
 	return nil
 }
 
-func (n nominates) Create(value Value, slices quorumSlices) *nominate {
+func (n nominates) create(value Value, slices quorumSlices) *nominate {
 	nominate := &nominate{
 		value:        value,
 		ratification: newRatification(),
